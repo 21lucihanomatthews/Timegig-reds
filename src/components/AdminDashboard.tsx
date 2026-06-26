@@ -223,7 +223,7 @@ export const AdminDashboard = ({
           <div className="overflow-hidden">
             <p className="text-[8px] font-black uppercase text-slate-400 tracking-wider leading-none">Profit</p>
             <p className="text-xs font-black text-slate-900 mt-0.5 truncate">
-              {liveProfit.toLocaleString()} Coins
+              R {(liveProfit * 0.1).toFixed(2)}
             </p>
             <p className="text-[7px] text-slate-400 font-bold mt-0.5 leading-none">12% Comm.</p>
           </div>

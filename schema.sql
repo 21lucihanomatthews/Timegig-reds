@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     dob TEXT DEFAULT '1995-05-12', -- User's Date of Birth (Required for Identity Verification)
     face_picture TEXT DEFAULT '', -- URL or base64 of user's face picture / selfie
     is_verified BOOLEAN DEFAULT FALSE, -- Set to TRUE once verified (Default: FALSE)
-    balance NUMERIC DEFAULT 500.00, -- User's wallet balance in Coins
+    balance NUMERIC DEFAULT 20.00, -- User's wallet balance in Coins
     pin TEXT, -- Security lock PIN code
     is_disabled BOOLEAN DEFAULT FALSE, -- Account suspension flag
     certificate_document TEXT, -- URL or name of certificate document
@@ -61,7 +61,7 @@ BEGIN
         new.id,
         COALESCE(new.raw_user_meta_data->>'name', ''),
         new.email,
-        500.00, -- Starting sign-up bonus balance
+        20.00, -- Starting sign-up bonus balance
         TRUE, -- Verified by default for testing purposes
         '1995-05-12' -- Default date of birth
     )

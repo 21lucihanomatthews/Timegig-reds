@@ -840,6 +840,30 @@ export default function App() {
     });
   }, []);
 
+  const deductBalance = async (amount: number, reason: string): Promise<boolean> => {
+    if (balance < amount) {
+      alert(`Insufficient balance. You need ${amount} coins to ${reason}. Please top up your wallet.`);
+      return false;
+    }
+    
+    const newBalance = balance - amount;
+    setBalance(newBalance);
+    
+    if (isSupabaseConfigured && session?.user?.id) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ balance: newBalance })
+        .eq('id', session.user.id);
+        
+      if (error) {
+        console.error("Failed to deduct balance", error);
+        setBalance(balance); // revert
+        return false;
+      }
+    }
+    return true;
+  };
+
   const [editProfileForm, setEditProfileForm] = useState<any>({});
   const [onboardingForm, setOnboardingForm] = useState({
     name: "",
@@ -1145,6 +1169,8 @@ export default function App() {
       }
       setEditingMessageId(null);
     } else if (file) {
+      if (!(await deductBalance(1, "send a file"))) return;
+      
       const fileUrl = URL.createObjectURL(file);
       const fileType = file.type.startsWith("image/") ? "image" : "video";
       const newMessage = {
@@ -1169,6 +1195,8 @@ export default function App() {
       }
     } else {
       if (inputValue.trim() === "") return;
+      if (!(await deductBalance(1, "send a message"))) return;
+      
       const newMessage = {
         text: inputValue,
         sender: "user",
@@ -1233,7 +1261,7 @@ export default function App() {
       face_picture: onboardingForm.face_picture,
       is_verified: true,
       pin: authPin,
-      balance: userProfile?.balance || 500
+      balance: userProfile?.balance || 20
     };
 
     if (isSupabaseConfigured) {
@@ -3429,7 +3457,7 @@ export default function App() {
             />
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 const name = (
                   document.getElementById("seeker-name") as HTMLInputElement
                 ).value;
@@ -3444,6 +3472,8 @@ export default function App() {
                 ).value;
 
                 if (!name) return;
+                
+                if (!(await deductBalance(3, "post a seeker profile"))) return;
 
                 // Simulated portfolio item from the first file if any
                 const fileInput = document.getElementById(
@@ -3563,6 +3593,10 @@ export default function App() {
                     const price = (document.getElementById("product-price") as HTMLInputElement).value;
 
                     if (!name || !price || !session) return;
+                    
+                    const cost = createProductType === 'sale' ? 3 : 2;
+                    const reason = createProductType === 'sale' ? 'post an item for sale' : 'post a wanted item';
+                    if (!(await deductBalance(cost, reason))) return;
 
                     const portfolio: { type: "image" | "video"; url: string }[] = [];
                     const fileInput = document.getElementById("product-files") as HTMLInputElement;
@@ -3782,24 +3816,28 @@ export default function App() {
                         <input type="file" accept="image/*" onChange={async (e) => {
                             if (e.target.files && e.target.files[0] && session) {
                                 const file = e.target.files[0];
-                                const documentUrl = URL.createObjectURL(file);
-                                const newPayment = {
-                                    userId: session.user.id,
-                                    userName: `${userProfile?.name || ''} ${userProfile?.surname || ''}`,
-                                    amount: parseInt(selectedTopupOption?.coins || '0'),
-                                    documentUrl,
-                                    status: 'pending',
-                                    date: new Date().toISOString().split('T')[0]
+                                const reader = new FileReader();
+                                reader.onloadend = async () => {
+                                  const documentUrl = reader.result as string;
+                                  const newPayment = {
+                                      userId: session.user.id,
+                                      userName: `${userProfile?.name || ''} ${userProfile?.surname || ''}`,
+                                      amount: parseInt(selectedTopupOption?.coins || '0'),
+                                      documentUrl,
+                                      status: 'pending',
+                                      date: new Date().toISOString().split('T')[0]
+                                  };
+                                  
+                                  if (isSupabaseConfigured) {
+                                      const { data, error } = await supabase.from('proofs_of_payment').insert([mapPaymentToDb(newPayment)]).select();
+                                      if (!error && data) {
+                                          setPayments(prev => [mapPaymentFromDb(data[0]), ...prev]);
+                                      }
+                                  } else {
+                                      setPayments(prev => [{ id: Date.now().toString(), ...newPayment }, ...prev]);
+                                  }
                                 };
-                                
-                                if (isSupabaseConfigured) {
-                                    const { data, error } = await supabase.from('proofs_of_payment').insert([mapPaymentToDb(newPayment)]).select();
-                                    if (!error && data) {
-                                        setPayments(prev => [mapPaymentFromDb(data[0]), ...prev]);
-                                    }
-                                } else {
-                                    setPayments(prev => [{ id: Date.now().toString(), ...newPayment }, ...prev]);
-                                }
+                                reader.readAsDataURL(file);
                             }
                         }} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                       </div>
@@ -4384,6 +4422,7 @@ export default function App() {
               <button
                 onClick={async () => {
                   if (!gigTitle || !gigBudget || !session) return;
+                  if (!(await deductBalance(3, "post a gig"))) return;
 
                   const newGig = { 
                     title: gigTitle, 
