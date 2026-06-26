@@ -1,0 +1,6 @@
+{
+  "name": "TimeGiG",
+  "description": "A platform for simple casual jobs anyone can do to fight unemployment in South Africa, featuring search filters across provinces and locations, red/white/black theme, and community promotion tools.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
